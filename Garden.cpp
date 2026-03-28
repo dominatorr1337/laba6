@@ -1,19 +1,36 @@
 #include "Garden.h"
 
-Plant::Plant() : id(0), name(""), type(""), growth_time_months(0) {}
+Plant::Plant() : id(0), name(""), type(""), growth_time_months(0), next(nullptr) {}
 
-Plant::Plant(int id, const string& name, const string& type, int growth_time)
-    : id(id), name(name), type(type), growth_time_months(growth_time) {}
+Plant::Plant(int id, const std::string& name, const std::string& type, int growth_time)
+    : id(id), name(name), type(type), growth_time_months(growth_time), next(nullptr) {}
+
+Plant::~Plant() {}
+
+Plant::Plant(const Plant& other)
+    : id(other.id), name(other.name), type(other.type), 
+      growth_time_months(other.growth_time_months), next(nullptr) {}
+
+Plant& Plant::operator=(const Plant& other) {
+    if (this != &other) {
+        id = other.id;
+        name = other.name;
+        type = other.type;
+        growth_time_months = other.growth_time_months;
+        next = nullptr;
+    }
+    return *this;
+}
 
 int Plant::getId() const {
     return id;
 }
 
-string Plant::getName() const {
+std::string Plant::getName() const {
     return name;
 }
 
-string Plant::getType() const {
+std::string Plant::getType() const {
     return type;
 }
 
@@ -21,11 +38,11 @@ int Plant::getGrowthTime() const {
     return growth_time_months;
 }
 
-void Plant::setName(const string& new_name) {
+void Plant::setName(const std::string& new_name) {
     name = new_name;
 }
 
-void Plant::setType(const string& new_type) {
+void Plant::setType(const std::string& new_type) {
     type = new_type;
 }
 
@@ -33,278 +50,346 @@ void Plant::setGrowthTime(int new_time) {
     growth_time_months = new_time;
 }
 
+Plant* Plant::getNext() const {
+    return next;
+}
+
+void Plant::setNext(Plant* next) {
+    this->next = next;
+}
+
 void Plant::display() const {
-    cout << "ID: " << id << endl;
-    cout << "Название: " << name << endl;
-    cout << "Вид: " << type << endl;
-    cout << "Время роста: " << growth_time_months << " месяцев" << endl;
+    std::cout << "ID: " << id << std::endl;
+    std::cout << "Название: " << name << std::endl;
+    std::cout << "Вид: " << type << std::endl;
+    std::cout << "Время роста: " << growth_time_months << " месяцев" << std::endl;
 }
 
-string Plant::toString() const {
-    return to_string(id) + "|" + name + "|" + type + "|" + to_string(growth_time_months);
+std::string Plant::toString() const {
+    return std::to_string(id) + "|" + name + "|" + type + "|" + std::to_string(growth_time_months);
 }
 
-Plant Plant::fromString(const string& line) {
-    stringstream ss(line);
-    string token;
-    vector<string> tokens;
+Plant Plant::fromString(const std::string& line) {
+    size_t pos1 = line.find('|');
+    size_t pos2 = line.find('|', pos1 + 1);
+    size_t pos3 = line.find('|', pos2 + 1);
     
-    while (getline(ss, token, '|')) {
-        tokens.push_back(token);
-    }
-    
-    if (tokens.size() == 4) {
-        int id = stoi(tokens[0]);
-        string name = tokens[1];
-        string type = tokens[2];
-        int growth_time = stoi(tokens[3]);
+    if (pos1 != std::string::npos && pos2 != std::string::npos && pos3 != std::string::npos) {
+        int id = std::stoi(line.substr(0, pos1));
+        std::string name = line.substr(pos1 + 1, pos2 - pos1 - 1);
+        std::string type = line.substr(pos2 + 1, pos3 - pos2 - 1);
+        int growth_time = std::stoi(line.substr(pos3 + 1));
         return Plant(id, name, type, growth_time);
     }
     
     return Plant();
 }
 
-GardenDB::GardenDB() : next_id(1) {}
+GardenDB::GardenDB() : head(nullptr), tail(nullptr), count(0), next_id(1), filename("garden_db.txt") {}
+
+GardenDB::GardenDB(const std::string& filename) 
+    : head(nullptr), tail(nullptr), count(0), next_id(1), filename(filename) {}
+
+GardenDB::~GardenDB() {
+    clear();
+}
+
+void GardenDB::clear() {
+    Plant* current = head;
+    while (current != nullptr) {
+        Plant* next = current->getNext();
+        delete current;
+        current = next;
+    }
+    head = nullptr;
+    tail = nullptr;
+    count = 0;
+    next_id = 1;
+}
 
 Plant* GardenDB::findPlantById(int id) {
-    auto it = find_if(plants.begin(), plants.end(),
-                      [id](const Plant& p) { return p.getId() == id; });
-    
-    if (it != plants.end()) {
-        return &(*it);
+    Plant* current = head;
+    while (current != nullptr && current->getId() != id) {
+        current = current->getNext();
     }
-    return nullptr;
+    return current;
 }
 
 const Plant* GardenDB::findPlantById(int id) const {
-    auto it = find_if(plants.begin(), plants.end(),
-                      [id](const Plant& p) { return p.getId() == id; });
-    
-    if (it != plants.end()) {
-        return &(*it);
+    Plant* current = head;
+    while (current != nullptr && current->getId() != id) {
+        current = current->getNext();
     }
-    return nullptr;
+    return current;
 }
 
 void GardenDB::addPlant() {
-    string name, type;
+    std::string name, type;
     int growth_time;
     
-    cout << "Введите название растения: ";
-    getline(cin, name);
+    std::cout << "Введите название растения: ";
+    std::getline(std::cin, name);
     
-    cout << "Введите вид растения (дерево, кустарник, цветок и т.д.): ";
-    getline(cin, type);
+    std::cout << "Введите вид растения (дерево, кустарник, цветок и т.д.): ";
+    std::getline(std::cin, type);
     
-    cout << "Введите время роста в месяцах: ";
-    cin >> growth_time;
+    std::cout << "Введите время роста в месяцах: ";
+    std::cin >> growth_time;
     clearInputBuffer();
     
-    Plant new_plant(next_id++, name, type, growth_time);
-    plants.push_back(new_plant);
+    Plant* new_plant = new Plant(next_id++, name, type, growth_time);
     
-    cout << "Растение успешно добавлено! ID: " << new_plant.getId() << endl;
+    if (head == nullptr) {
+        head = new_plant;
+        tail = new_plant;
+    } else {
+        tail->setNext(new_plant);
+        tail = new_plant;
+    }
+    
+    count++;
+    std::cout << "Растение успешно добавлено! ID: " << new_plant->getId() << std::endl;
 }
 
 bool GardenDB::deletePlant(int id) {
-    auto it = find_if(plants.begin(), plants.end(),
-                      [id](const Plant& p) { return p.getId() == id; });
-    
-    if (it != plants.end()) {
-        plants.erase(it);
-        cout << "Растение с ID " << id << " успешно удалено!" << endl;
-        return true;
+    if (head == nullptr) {
+        std::cout << "База данных пуста!" << std::endl;
+        return false;
     }
     
-    cout << "Растение с ID " << id << " не найдено!" << endl;
-    return false;
+    Plant* current = head;
+    Plant* prev = nullptr;
+    
+    while (current != nullptr && current->getId() != id) {
+        prev = current;
+        current = current->getNext();
+    }
+    
+    if (current == nullptr) {
+        std::cout << "Растение с ID " << id << " не найдено!" << std::endl;
+        return false;
+    }
+    
+    if (prev == nullptr) {
+        head = current->getNext();
+        if (head == nullptr) {
+            tail = nullptr;
+        }
+    } else {
+        prev->setNext(current->getNext());
+        if (current == tail) {
+            tail = prev;
+        }
+    }
+    
+    delete current;
+    count--;
+    std::cout << "Растение с ID " << id << " успешно удалено!" << std::endl;
+    return true;
 }
 
 bool GardenDB::editPlant(int id) {
     Plant* plant = findPlantById(id);
     
     if (plant == nullptr) {
-        cout << "Растение с ID " << id << " не найдено!" << endl;
+        std::cout << "Растение с ID " << id << " не найдено!" << std::endl;
         return false;
     }
     
-    cout << "Редактирование растения (ID: " << id << "):" << endl;
-    cout << "Текущее название: " << plant->getName() << endl;
-    cout << "Введите новое название (или нажмите Enter для пропуска): ";
+    std::cout << "Редактирование растения (ID: " << id << "):" << std::endl;
+    std::cout << "Текущее название: " << plant->getName() << std::endl;
+    std::cout << "Введите новое название (или нажмите Enter для пропуска): ";
     
-    string input;
-    getline(cin, input);
+    std::string input;
+    std::getline(std::cin, input);
     if (!input.empty()) {
         plant->setName(input);
     }
     
-    cout << "Текущий вид: " << plant->getType() << endl;
-    cout << "Введите новый вид (или нажмите Enter для пропуска): ";
+    std::cout << "Текущий вид: " << plant->getType() << std::endl;
+    std::cout << "Введите новый вид (или нажмите Enter для пропуска): ";
     
-    getline(cin, input);
+    std::getline(std::cin, input);
     if (!input.empty()) {
         plant->setType(input);
     }
     
-    cout << "Текущее время роста: " << plant->getGrowthTime() << " месяцев" << endl;
-    cout << "Введите новое время роста (или -1 для пропуска): ";
+    std::cout << "Текущее время роста: " << plant->getGrowthTime() << " месяцев" << std::endl;
+    std::cout << "Введите новое время роста (или -1 для пропуска): ";
     
     int new_time;
-    if (cin >> new_time && new_time >= 0) {
+    if (std::cin >> new_time && new_time >= 0) {
         plant->setGrowthTime(new_time);
     }
     clearInputBuffer();
     
-    cout << "Растение успешно обновлено!" << endl;
+    std::cout << "Растение успешно обновлено!" << std::endl;
     return true;
 }
 
 void GardenDB::displayAllPlants() const {
-    if (plants.empty()) {
-        cout << "База данных пуста!" << endl;
+    if (head == nullptr) {
+        std::cout << "База данных пуста!" << std::endl;
         return;
     }
     
-    cout << "\n=========================================" << endl;
-    cout << "          БАЗА ДАННЫХ РАСТЕНИЙ" << endl;
-    cout << "=========================================" << endl;
-    cout << "ID  | Название               | Вид              | Время роста" << endl;
-    cout << "----|------------------------|------------------|------------" << endl;
+    std::cout << "\n=========================================" << std::endl;
+    std::cout << "          БАЗА ДАННЫХ РАСТЕНИЙ" << std::endl;
+    std::cout << "=========================================" << std::endl;
+    std::cout << "ID  | Название               | Вид              | Время роста" << std::endl;
+    std::cout << "----|------------------------|------------------|------------" << std::endl;
     
-    for (const auto& plant : plants) {
+    Plant* current = head;
+    while (current != nullptr) {
         printf("%-3d | %-22s | %-16s | %d месяцев\n",
-               plant.getId(),
-               plant.getName().c_str(),
-               plant.getType().c_str(),
-               plant.getGrowthTime());
+               current->getId(),
+               current->getName().c_str(),
+               current->getType().c_str(),
+               current->getGrowthTime());
+        current = current->getNext();
     }
     
-    cout << "=========================================" << endl;
-    cout << "Всего растений: " << plants.size() << endl;
+    std::cout << "=========================================" << std::endl;
+    std::cout << "Всего растений: " << count << std::endl;
 }
 
-const Plant* GardenDB::findPlantByName(const string& name) const {
-    auto it = find_if(plants.begin(), plants.end(),
-                      [&name](const Plant& p) { return p.getName() == name; });
+const Plant& GardenDB::findPlantByName(const std::string& name) const {
+    static Plant empty_plant;
     
-    if (it != plants.end()) {
-        return &(*it);
-    }
-    return nullptr;
-}
-
-const Plant* GardenDB::findPlantByType(const string& type) const {
-    auto it = find_if(plants.begin(), plants.end(),
-                      [&type](const Plant& p) { return p.getType() == type; });
-    
-    if (it != plants.end()) {
-        return &(*it);
-    }
-    return nullptr;
-}
-
-vector<const Plant*> GardenDB::findAllPlantsByType(const string& type) const {
-    vector<const Plant*> result;
-    
-    for (const auto& plant : plants) {
-        if (plant.getType() == type) {
-            result.push_back(&plant);
+    Plant* current = head;
+    while (current != nullptr) {
+        if (current->getName() == name) {
+            return *current;
         }
+        current = current->getNext();
     }
     
-    return result;
+    return empty_plant;
 }
 
-bool GardenDB::saveToFile(const string& filename) const {
-    ofstream file(filename);
+const Plant& GardenDB::findPlantByType(const std::string& type) const {
+    static Plant empty_plant;
+    
+    Plant* current = head;
+    while (current != nullptr) {
+        if (current->getType() == type) {
+            return *current;
+        }
+        current = current->getNext();
+    }
+    
+    return empty_plant;
+}
+
+bool GardenDB::saveToFile() const {
+    std::ofstream file(filename);
     
     if (!file.is_open()) {
-        cout << "Ошибка открытия файла для записи!" << endl;
+        std::cout << "Ошибка открытия файла '" << filename << "' для записи!" << std::endl;
         return false;
     }
     
-    file << next_id << endl;
+    file << next_id << std::endl;
     
-    for (const auto& plant : plants) {
-        file << plant.toString() << endl;
+    Plant* current = head;
+    while (current != nullptr) {
+        file << current->toString() << std::endl;
+        current = current->getNext();
     }
     
     file.close();
-    cout << "Данные успешно сохранены в файл '" << filename << "'!" << endl;
+    std::cout << "Данные успешно сохранены в файл '" << filename << "'!" << std::endl;
     return true;
 }
 
-bool GardenDB::loadFromFile(const string& filename) {
-    ifstream file(filename);
+bool GardenDB::loadFromFile() {
+    std::ifstream file(filename);
     
     if (!file.is_open()) {
-        cout << "Файл базы данных не найден. Будет создан новый." << endl;
+        std::cout << "Файл '" << filename << "' не найден. Будет создан новый." << std::endl;
         return false;
     }
     
-    plants.clear();
+    clear();
     
-    string line;
-    if (!getline(file, line)) {
-        cout << "Ошибка чтения файла!" << endl;
+    std::string line;
+    if (!std::getline(file, line)) {
+        std::cout << "Ошибка чтения файла!" << std::endl;
         file.close();
         return false;
     }
     
     try {
-        next_id = stoi(line);
+        next_id = std::stoi(line);
     } catch (...) {
-        cout << "Ошибка формата файла!" << endl;
+        std::cout << "Ошибка формата файла!" << std::endl;
         file.close();
         return false;
     }
     
-    while (getline(file, line)) {
+    while (std::getline(file, line)) {
         if (!line.empty()) {
             Plant plant = Plant::fromString(line);
             if (plant.getId() != 0) {
-                plants.push_back(plant);
+                Plant* new_plant = new Plant(plant);
+                
+                if (head == nullptr) {
+                    head = new_plant;
+                    tail = new_plant;
+                } else {
+                    tail->setNext(new_plant);
+                    tail = new_plant;
+                }
+                count++;
             }
         }
     }
     
     file.close();
-    cout << "Данные успешно загружены из файла '" << filename << "'!" << endl;
-    cout << "Загружено растений: " << plants.size() << endl;
+    std::cout << "Данные успешно загружены из файла '" << filename << "'!" << std::endl;
+    std::cout << "Загружено растений: " << count << std::endl;
     return true;
 }
 
 int GardenDB::getPlantCount() const {
-    return plants.size();
+    return count;
 }
 
 bool GardenDB::isEmpty() const {
-    return plants.empty();
+    return head == nullptr;
+}
+
+void GardenDB::setFilename(const std::string& filename) {
+    this->filename = filename;
+}
+
+std::string GardenDB::getFilename() const {
+    return filename;
 }
 
 void GardenDB::showMenu() {
-    cout << "\n========== МЕНЮ УПРАВЛЕНИЯ САДОМ ==========" << endl;
-    cout << "1. Показать все растения" << endl;
-    cout << "2. Добавить новое растение" << endl;
-    cout << "3. Удалить растение" << endl;
-    cout << "4. Редактировать растение" << endl;
-    cout << "5. Найти растение по названию" << endl;
-    cout << "6. Найти растение по виду" << endl;
-    cout << "7. Сохранить изменения" << endl;
-    cout << "8. Загрузить из файла" << endl;
-    cout << "9. Выход" << endl;
-    cout << "===========================================" << endl;
-    cout << "Введите номер: ";
+    std::cout << "\n========== МЕНЮ УПРАВЛЕНИЯ САДОМ ==========" << std::endl;
+    std::cout << "1. Показать все растения" << std::endl;
+    std::cout << "2. Добавить новое растение" << std::endl;
+    std::cout << "3. Удалить растение" << std::endl;
+    std::cout << "4. Редактировать растение" << std::endl;
+    std::cout << "5. Найти растение по названию" << std::endl;
+    std::cout << "6. Найти растение по виду" << std::endl;
+    std::cout << "7. Сохранить изменения" << std::endl;
+    std::cout << "8. Загрузить из файла" << std::endl;
+    std::cout << "9. Выход" << std::endl;
+    std::cout << "===========================================" << std::endl;
+    std::cout << "Введите номер: ";
 }
 
 int GardenDB::getChoice() {
     int choice;
-    cin >> choice;
+    std::cin >> choice;
     clearInputBuffer();
     return choice;
 }
 
 void GardenDB::clearInputBuffer() {
-    cin.clear();
-    cin.ignore(numeric_limits<streamsize>::max(), '\n');
+    std::cin.clear();
+    std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 }
