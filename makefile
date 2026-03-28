@@ -14,9 +14,12 @@ $(TARGET): $(OBJECTS)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 clean:
-	rm -f $(OBJECTS) $(TARGET) garden_db.txt
+	rm -f $(OBJECTS) $(TARGET) *.txt
 
 run: $(TARGET)
 	./$(TARGET)
 
-.PHONY: all clean run
+run_custom: $(TARGET)
+	./$(TARGET) my_garden.txt
+
+.PHONY: all clean run run_custom
