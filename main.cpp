@@ -1,14 +1,29 @@
 #include "Garden.h"
+#include <iostream>
 
-int main() {
+void printUsage(const char* program_name) {
+    std::cout << "Использование: " << program_name << " [имя_файла_базы_данных]" << std::endl;
+    std::cout << "Пример: " << program_name << " my_garden.txt" << std::endl;
+    std::cout << "Если имя файла не указано, используется garden_db.txt" << std::endl;
+}
+
+int main(int argc, char* argv[]) {
     GardenDB db;
-    const string FILENAME = "garden_db.txt";
     
-    db.loadFromFile(FILENAME);
+    if (argc > 1) {
+        db.setFilename(argv[1]);
+        std::cout << "Используется файл базы данных: " << argv[1] << std::endl;
+    } else {
+        std::cout << "Используется файл базы данных по умолчанию: garden_db.txt" << std::endl;
+        std::cout << "Для указания своего файла запустите: " << argv[0] << " имя_файла.txt" << std::endl;
+    }
+    
+    std::cout << "Загрузка базы данных..." << std::endl;
+    db.loadFromFile();
     
     bool running = true;
     
-    cout << "Добро пожаловать в программу управления садом!" << endl;
+    std::cout << "\nДобро пожаловать в программу управления садом!" << std::endl;
     
     while (running) {
         GardenDB::showMenu();
@@ -25,91 +40,91 @@ int main() {
                 
             case 3:
                 if (!db.isEmpty()) {
-                    cout << "Введите ID растения для удаления: ";
+                    std::cout << "Введите ID растения для удаления: ";
                     int id;
-                    cin >> id;
+                    std::cin >> id;
                     GardenDB::clearInputBuffer();
                     db.deletePlant(id);
                 } else {
-                    cout << "База данных пуста!" << endl;
+                    std::cout << "База данных пуста!" << std::endl;
                 }
                 break;
                 
             case 4:
                 if (!db.isEmpty()) {
-                    cout << "Введите ID растения для редактирования: ";
+                    std::cout << "Введите ID растения для редактирования: ";
                     int id;
-                    cin >> id;
+                    std::cin >> id;
                     GardenDB::clearInputBuffer();
                     db.editPlant(id);
                 } else {
-                    cout << "База данных пуста!" << endl;
+                    std::cout << "База данных пуста!" << std::endl;
                 }
                 break;
                 
-            case 5:
+            case 5: {
                 if (!db.isEmpty()) {
-                    cout << "Введите название для поиска: ";
-                    string name;
-                    getline(cin, name);
+                    std::cout << "Введите название для поиска: ";
+                    std::string name;
+                    std::getline(std::cin, name);
                     
-                    const Plant* found = db.findPlantByName(name);
-                    if (found != nullptr) {
-                        cout << "\nНайдено растение:" << endl;
-                        found->display();
+                    const Plant& found = db.findPlantByName(name);
+                    if (found.getId() != 0) {
+                        std::cout << "\nНайдено растение:" << std::endl;
+                        found.display();
                     } else {
-                        cout << "Растение с названием '" << name << "' не найдено!" << endl;
+                        std::cout << "Растение с названием '" << name << "' не найдено!" << std::endl;
                     }
                 } else {
-                    cout << "База данных пуста!" << endl;
+                    std::cout << "База данных пуста!" << std::endl;
                 }
                 break;
+            }
                 
-            case 6:
+            case 6: {
                 if (!db.isEmpty()) {
-                    cout << "Введите вид для поиска: ";
-                    string type;
-                    getline(cin, type);
+                    std::cout << "Введите вид для поиска: ";
+                    std::string type;
+                    std::getline(std::cin, type);
                     
-                    vector<const Plant*> found = db.findAllPlantsByType(type);
-                    if (!found.empty()) {
-                        cout << "\nНайдено растений: " << found.size() << endl;
-                        for (const auto* plant : found) {
-                            cout << "------------------------" << endl;
-                            plant->display();
-                        }
+                    const Plant& found = db.findPlantByType(type);
+                    if (found.getId() != 0) {
+                        std::cout << "\nНайдено растение:" << std::endl;
+                        found.display();
                     } else {
-                        cout << "Растения вида '" << type << "' не найдены!" << endl;
+                        std::cout << "Растение вида '" << type << "' не найдено!" << std::endl;
                     }
                 } else {
-                    cout << "База данных пуста!" << endl;
+                    std::cout << "База данных пуста!" << std::endl;
                 }
                 break;
+            }
                 
             case 7:
-                db.saveToFile(FILENAME);
+                db.saveToFile();
                 break;
                 
             case 8:
-                db.loadFromFile(FILENAME);
+                db.loadFromFile();
                 break;
                 
-            case 9:
-                cout << "Сохранить изменения перед выходом? (y/n): ";
+            case 9: {
+                std::cout << "Сохранить изменения перед выходом? (y/n): ";
                 char answer;
-                cin >> answer;
+                std::cin >> answer;
                 GardenDB::clearInputBuffer();
                 
                 if (answer == 'y' || answer == 'Y') {
-                    db.saveToFile(FILENAME);
+                    db.saveToFile();
                 }
                 
                 running = false;
-                cout << "До свидания!" << endl;
+                std::cout << "До свидания!" << std::endl;
                 break;
+            }
                 
             default:
-                cout << "Неверный выбор! Пожалуйста, введите число от 1 до 9." << endl;
+                std::cout << "Неверный выбор! Пожалуйста, введите число от 1 до 9." << std::endl;
         }
     }
     
